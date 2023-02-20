@@ -1,0 +1,8 @@
+data-dir: /data
+enable-diff-markdown-format: true
+hide-prev-plan-comments: true
+log-level: info
+port: 8080
+repo-config: /config/repos.yaml
+allow-commands: all
+#write-git-creds: true

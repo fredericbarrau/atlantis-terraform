@@ -1,0 +1,32 @@
+# repos.yaml
+# Specify TERRAGRUNT_TFPATH environment variable to accommodate setting --default-tf-version
+# Generate json plan via terragrunt for policy checks
+repos:
+  - id: "/.*/"
+    workflow: terragrunt
+    allowed_overrides: []
+    # will block apply if the pr has not been approved
+    # apply_requirements: [approved]
+    # Even more control:
+    # apply_requirements: [mergeable, approved, undiverged]
+    # For the POC:
+    apply_requirements: [mergeable, undiverged]
+    import_requirements: [mergeable, undiverged]
+
+    delete_source_branch_on_merge: true
+
+workflows:
+  terragrunt:
+    plan:
+      steps:
+        - env:
+            name: TERRAGRUNT_TFPATH
+            command: 'echo "terraform${ATLANTIS_TERRAFORM_VERSION}"'
+        - run: terragrunt plan -input=false -out=$PLANFILE
+        - run: terragrunt show -json $PLANFILE > $SHOWFILE
+    apply:
+      steps:
+        - env:
+            name: TERRAGRUNT_TFPATH
+            command: 'echo "terraform${ATLANTIS_TERRAFORM_VERSION}"'
+        - run: terragrunt apply -input=false $PLANFILE
