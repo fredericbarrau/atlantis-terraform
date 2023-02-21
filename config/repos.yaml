@@ -13,6 +13,14 @@ repos:
     apply_requirements: [mergeable, approved, undiverged]
     import_requirements: [mergeable, undiverged]
     delete_source_branch_on_merge: true
+    # Generate terragrunt repo config
+    pre_workflow_hooks:
+      - run: |
+          terragrunt-atlantis-config generate\
+           --output atlantis.yaml\
+           --autoplan\
+           --automerge\
+           --parallel
     # Infracost post workflow
     post_workflow_hooks:
       - run: |
