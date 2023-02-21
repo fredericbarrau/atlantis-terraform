@@ -68,12 +68,14 @@ workflows:
         - run: terragrunt plan -input=false -out=$PLANFILE
         - run: terragrunt show -json $PLANFILE > $SHOWFILE
         - run: |
-            if [ ! -d "/data/infracost/$BASE_REPO_OWNER-$BASE_REPO_NAME-$PULL_NUM" ]; then
-              mkdir -p /data/infracost/$BASE_REPO_OWNER-$BASE_REPO_NAME-$PULL_NUM
-            fi
+            if [ -n "$ATLANTIS_GH_TOKEN" ];then
+              if [ ! -d "/data/infracost/$BASE_REPO_OWNER-$BASE_REPO_NAME-$PULL_NUM" ]; then
+                mkdir -p /data/infracost/$BASE_REPO_OWNER-$BASE_REPO_NAME-$PULL_NUM
+              fi
 
-            infracost breakdown --path=$SHOWFILE \
-                                --format=json \
-                                --log-level=info \
-                                --out-file=$INFRACOST_OUTPUT \
-                                --project-name=$REPO_REL_DIR
+              infracost breakdown --path=$SHOWFILE \
+                                  --format=json \
+                                  --log-level=info \
+                                  --out-file=$INFRACOST_OUTPUT \
+                                  --project-name=$REPO_REL_DIR
+            fi
