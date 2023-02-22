@@ -3,24 +3,22 @@
 # Generate json plan via terragrunt for policy checks
 repos:
   - id: "/.*/"
-    workflow: terragrunt-infracost
-    allowed_overrides: []
-    # will block apply if the pr has not been approved
-    # apply_requirements: [approved]
-    # Even more control:
-    # apply_requirements: [mergeable, approved, undiverged]
-    # For the POC:
+    workflow: terragrunt
+    # Projects can choose their workflow
+    allowed_overrides: [workflow]
     apply_requirements: [mergeable, approved, undiverged]
     import_requirements: [mergeable, undiverged]
     delete_source_branch_on_merge: true
     # Generate terragrunt repo config
     pre_workflow_hooks:
       - run: |
-          terragrunt-atlantis-config generate\
-           --output atlantis.yaml\
-           --autoplan\
-           --automerge\
-           --parallel
+          if [ -s terragrunt.hcl ];then
+            terragrunt-atlantis-config generate\
+            --output atlantis.yaml\
+            --autoplan\
+            --automerge\
+            --parallel
+          fi
     # Infracost post workflow
     post_workflow_hooks:
       - run: |
@@ -50,21 +48,29 @@ repos:
           # triggered on an `atlantis apply`
           rm -rf /data/infracost/$BASE_REPO_OWNER-$BASE_REPO_NAME-$PULL_NUM
 workflows:
-  terragrunt:
+  # It's important that this is "default".
+  default:
     plan:
       steps:
-        - env:
-            name: TERRAGRUNT_TFPATH
-            command: 'echo "terraform${ATLANTIS_TERRAFORM_VERSION}"'
-        - run: terragrunt plan -input=false -out=$PLANFILE
-        - run: terragrunt show -json $PLANFILE > $SHOWFILE
+        - init
+        - run: terraform plan -input=false -out=$PLANFILE
+        - run: terraform show -json $PLANFILE > $SHOWFILE
+        - run: |
+            if [ -n "$ATLANTIS_GH_TOKEN" ];then
+              if [ ! -d "/data/infracost/$BASE_REPO_OWNER-$BASE_REPO_NAME-$PULL_NUM" ]; then
+                mkdir -p /data/infracost/$BASE_REPO_OWNER-$BASE_REPO_NAME-$PULL_NUM
+              fi
+
+              infracost breakdown --path=$SHOWFILE \
+                                  --format=json \
+                                  --log-level=info \
+                                  --out-file=$INFRACOST_OUTPUT \
+                                  --project-name=$REPO_REL_DIR
+            fi
     apply:
       steps:
-        - env:
-            name: TERRAGRUNT_TFPATH
-            command: 'echo "terraform${ATLANTIS_TERRAFORM_VERSION}"'
-        - run: terragrunt apply -input=false $PLANFILE
-  terragrunt-infracost:
+        - run: terraform show -json $PLANFILE > $SHOWFILE
+  terragrunt:
     plan:
       steps:
         - env:
