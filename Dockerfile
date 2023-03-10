@@ -1,11 +1,14 @@
 ARG TERRAGRUNT_VERSION=1.3.8 
 ARG ATLANTIS_VERSION=0.22.3
+ARG INFRACOST_VERSION=0.10.17
+ARG TERRAGRUNT_ATLANTIS_VERSION=1.16.0
 
 FROM alpine/terragrunt:${TERRAGRUNT_VERSION}
 FROM ghcr.io/runatlantis/atlantis:v${ATLANTIS_VERSION}-alpine
 
-ARG INFRACOST_VERSION=0.10.17
-ARG TERRAGRUNT_ATLANTIS_VERSION=1.16.0
+# ARGs used after FROM, so they must be re-declared
+ARG INFRACOST_VERSION
+ARG TERRAGRUNT_ATLANTIS_VERSION
 
 # Copy terragrunt
 COPY --from=0 /usr/local/bin/terragrunt /usr/local/bin/terragrunt
@@ -24,6 +27,32 @@ RUN \
     mv terragrunt-atlantis-config_${TERRAGRUNT_ATLANTIS_VERSION}_linux_amd64/terragrunt-atlantis-config_${TERRAGRUNT_ATLANTIS_VERSION}_linux_amd64 terragrunt-atlantis-config &&\
     install terragrunt-atlantis-config /usr/local/bin 
 
-# Git config
+# Install python3 for Gcloud installer
+# Install jq for custom scripts
+RUN apk add python3 jq
+
+# Create configuration folder
+RUN mkdir /config && chown atlantis:atlantis /config
+# Copy the configuration files
+COPY ./config/* /config/
+RUN chown -R atlantis:atlantis /config
+
+# Install gcloud as root
+ENV CLOUDSDK_INSTALL_DIR /usr/local/gcloud
+RUN curl -sSL https://sdk.cloud.google.com | bash
+RUN ln -s /usr/local/gcloud/google-cloud-sdk/gcloud /usr/local/bin/gcloud
+RUN ln -s /usr/local/gcloud/google-cloud-sdk/gsutil /usr/local/bin/gsutil
+
+# Copy the utility scripts
+RUN mkdir /scripts
+COPY ./scripts/* /scripts/
+RUN chown -R atlantis:atlantis /scripts && chmod +x /scripts/*
+
 USER atlantis
+# Configure git for sharing volume files
 RUN git config --global --add safe.directory '*'
+
+# Setup Gcloud SDK
+RUN gcloud config set disable_usage_reporting false
+
+ENTRYPOINT [ "atlantis", "--config=/config/server-settings.yaml" ]

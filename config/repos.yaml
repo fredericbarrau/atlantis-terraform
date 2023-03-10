@@ -48,10 +48,18 @@ repos:
           # triggered on an `atlantis apply`
           rm -rf /data/infracost/$BASE_REPO_OWNER-$BASE_REPO_NAME-$PULL_NUM
 workflows:
+  #
+  # Available env vars in run steps:
+  # https://www.runatlantis.io/docs/custom-workflows.html#step
+  #
   # It's important that this is "default".
   default:
     plan:
       steps:
+        # Force impersonation by terraform
+        - env:
+            name: GOOGLE_IMPERSONATE_SERVICE_ACCOUNT
+            command: "/scripts/get-project-service-account.sh"
         - init
         - run: terraform plan -input=false -out=$PLANFILE
         - run: terraform show -json $PLANFILE > $SHOWFILE
@@ -69,10 +77,18 @@ workflows:
             fi
     apply:
       steps:
+        # Force impersonation by terraform
+        - env:
+            name: GOOGLE_IMPERSONATE_SERVICE_ACCOUNT
+            command: "/scripts/get-project-service-account.sh"
         - run: terraform show -json $PLANFILE > $SHOWFILE
   terragrunt:
     plan:
       steps:
+        # Force impersonation by terraform
+        - env:
+            name: GOOGLE_IMPERSONATE_SERVICE_ACCOUNT
+            command: "/scripts/get-project-service-account.sh"
         - env:
             name: INFRACOST_OUTPUT
             command: 'echo "/data/infracost/$BASE_REPO_OWNER-$BASE_REPO_NAME-$PULL_NUM/$WORKSPACE-${REPO_REL_DIR//\//-}-infracost.json"'
