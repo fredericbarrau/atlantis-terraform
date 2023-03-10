@@ -40,8 +40,8 @@ RUN chown -R atlantis:atlantis /config
 # Install gcloud as root
 ENV CLOUDSDK_INSTALL_DIR /usr/local/gcloud
 RUN curl -sSL https://sdk.cloud.google.com | bash
-RUN ln -s /usr/local/gcloud/google-cloud-sdk/gcloud /usr/local/bin/gcloud
-RUN ln -s /usr/local/gcloud/google-cloud-sdk/gsutil /usr/local/bin/gsutil
+RUN ln -s /usr/local/gcloud/google-cloud-sdk/bin/gcloud /usr/local/bin/gcloud
+RUN ln -s /usr/local/gcloud/google-cloud-sdk/bin/gsutil /usr/local/bin/gsutil
 
 # Copy the utility scripts
 RUN mkdir /scripts
