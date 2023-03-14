@@ -13,11 +13,7 @@ repos:
     pre_workflow_hooks:
       - run: |
           if [ -s terragrunt.hcl ];then
-            terragrunt-atlantis-config generate\
-            --output atlantis.yaml\
-            --autoplan\
-            --automerge\
-            --parallel
+            /scripts/generate-terragrunt-config.sh
           fi
     # Infracost post workflow
     post_workflow_hooks:
@@ -59,7 +55,7 @@ workflows:
         # Force impersonation by terraform
         - env:
             name: GOOGLE_IMPERSONATE_SERVICE_ACCOUNT
-            command: "/scripts/get-project-service-account.sh"
+            command: "/scripts/get-environment-service-account.sh"
         - init
         - run: terraform plan -input=false -out=$PLANFILE
         - run: terraform show -json $PLANFILE > $SHOWFILE
@@ -80,15 +76,15 @@ workflows:
         # Force impersonation by terraform
         - env:
             name: GOOGLE_IMPERSONATE_SERVICE_ACCOUNT
-            command: "/scripts/get-project-service-account.sh"
-        - run: terraform show -json $PLANFILE > $SHOWFILE
+            command: "/scripts/get-environment-service-account.sh"
+        - run: terraform apply $PLANFILE
   terragrunt:
     plan:
       steps:
         # Force impersonation by terraform
         - env:
             name: GOOGLE_IMPERSONATE_SERVICE_ACCOUNT
-            command: "/scripts/get-project-service-account.sh"
+            command: "/scripts/get-environment-service-account.sh"
         - env:
             name: INFRACOST_OUTPUT
             command: 'echo "/data/infracost/$BASE_REPO_OWNER-$BASE_REPO_NAME-$PULL_NUM/$WORKSPACE-${REPO_REL_DIR//\//-}-infracost.json"'
@@ -109,3 +105,10 @@ workflows:
                                   --out-file=$INFRACOST_OUTPUT \
                                   --project-name=$REPO_REL_DIR
             fi
+    apply:
+      steps:
+        # Force impersonation by terraform
+        - env:
+            name: GOOGLE_IMPERSONATE_SERVICE_ACCOUNT
+            command: "/scripts/get-environment-service-account.sh"
+        - run: terragrunt apply $PLANFILE
